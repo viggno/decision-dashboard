@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Dashboard — Instituto Viggno | Stack Tecnologico</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-border: #334155;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #22d3ee;
+    --green: #4ade80;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --orange: #fb923c;
+    --purple: #a78bfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); padding: 24px; line-height: 1.5; }
+  .header { text-align: center; margin-bottom: 32px; padding: 32px 0 24px; border-bottom: 1px solid var(--card-border); }
+  .header h1 { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .header .subtitle { color: var(--text-muted); font-size: 14px; }
+  .decision-banner { background: linear-gradient(135deg, #0d9488, #0891b2); border-radius: 12px; padding: 24px 32px; margin-bottom: 32px; display: flex; align-items: center; gap: 20px; }
+  .decision-banner .icon { font-size: 36px; }
+  .decision-banner h2 { font-size: 20px; font-weight: 700; color: #fff; }
+  .decision-banner p { color: #ccfbf1; font-size: 14px; margin-top: 4px; }
+  .decision-banner .tag { display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #fff; margin-top: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 24px; margin-bottom: 32px; }
+  .card { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 24px; }
+  .card h3 { font-size: 16px; font-weight: 600; color: var(--accent); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-full { grid-column: 1 / -1; }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .kpi { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; text-align: center; }
+  .kpi .value { font-size: 28px; font-weight: 700; color: #fff; }
+  .kpi .label { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .kpi .delta { font-size: 12px; margin-top: 4px; font-weight: 600; }
+  .kpi .delta.positive { color: var(--green); }
+  .kpi .delta.negative { color: var(--red); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 10px 12px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid var(--card-border); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { padding: 10px 12px; border-bottom: 1px solid #1e293b; }
+  tr:hover td { background: rgba(56, 189, 248, 0.05); }
+  .score-bar { height: 8px; border-radius: 4px; background: #334155; position: relative; }
+  .score-bar-fill { height: 100%; border-radius: 4px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+  .badge-yellow { background: rgba(251, 191, 36, 0.15); color: var(--yellow); }
+  .badge-red { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+  .badge-blue { background: rgba(56, 189, 248, 0.15); color: var(--accent); }
+  .arch-block { background: #0f172a; border: 1px solid var(--card-border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+  .arch-block h4 { font-size: 14px; font-weight: 700; color: var(--accent2); margin-bottom: 8px; }
+  .arch-block ul { list-style: none; padding: 0; }
+  .arch-block li { font-size: 13px; color: var(--text-muted); padding: 2px 0; }
+  .arch-block li::before { content: "→ "; color: var(--accent); }
+  .arch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .risk-cell { padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .risk-critical { background: rgba(248, 113, 113, 0.15); border-left: 3px solid var(--red); }
+  .risk-high { background: rgba(251, 191, 36, 0.15); border-left: 3px solid var(--yellow); }
+  .risk-medium { background: rgba(56, 189, 248, 0.15); border-left: 3px solid var(--accent); }
+  .risk-low { background: rgba(74, 222, 128, 0.15); border-left: 3px solid var(--green); }
+  .gantt-phase { margin-bottom: 16px; }
+  .gantt-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .gantt-bar-track { height: 28px; background: #0f172a; border-radius: 6px; position: relative; overflow: hidden; }
+  .gantt-bar-fill { height: 100%; border-radius: 6px; display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 600; color: #fff; position: absolute; }
+  .note-box { background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.2); border-radius: 8px; padding: 16px; margin-top: 16px; font-size: 13px; color: var(--text-muted); }
+  .note-box strong { color: var(--accent); }
+  .chatwoot-banner { background: linear-gradient(135deg, #7c3aed, #6d28d9); border-radius: 12px; padding: 20px 28px; margin-bottom: 32px; }
+  .chatwoot-banner h3 { color: #fff; font-size: 16px; margin-bottom: 8px; }
+  .chatwoot-banner p { color: #ddd6fe; font-size: 13px; }
+  .footer { text-align: center; padding: 24px 0; color: var(--text-muted); font-size: 12px; border-top: 1px solid var(--card-border); margin-top: 32px; }
+  canvas { max-height: 320px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>DECISION DASHBOARD</h1>
+  <div class="subtitle">Instituto Viggno — Stack Tecnologico | Fevereiro 2026 | CEO Decision Document</div>
+</div>
+
+<div class="decision-banner">
+  <div class="icon">&#9654;</div>
+  <div>
+    <h2>Feegow Clinic (Pro) + Chatwoot (WhatsApp API Meta) + SDR IA integrado</h2>
+    <p>Sistema-nucleo clinico com API REST publica, SBIS NGS2, financeiro integrado. WhatsApp oficial via Chatwoot (ja operacional). Integracao Chatwoot→Feegow via API/webhooks.</p>
+    <span class="tag">RECOMENDACAO FINAL — SCORE 8.18/10</span>
+  </div>
+</div>
+
+<div class="chatwoot-banner">
+  <h3>&#9889; Impacto Chatwoot: Cloudia REMOVIDA do stack</h3>
+  <p>Com Chatwoot ja operacional como SDR IA + WhatsApp Business API (Meta oficial — embedded signup, sem BSP terceiro), Cloudia e <strong>desnecessaria</strong>. O Chatwoot conecta direto na Cloud API da Meta, tem webhooks (conversation_created, message_created, etc.), e API REST completa. A integracao com Feegow sera feita via webhooks Chatwoot → API Feegow (criar agendamento, sincronizar paciente). Economia estimada: R$ 4.200–6.000/ano em BSP.</p>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="value">R$ 18.200</div>
+    <div class="label">TCO 12 meses (com Chatwoot)</div>
+    <div class="delta positive">-27% vs. cenario Cloudia</div>
+  </div>
+  <div class="kpi">
+    <div class="value">8.18</div>
+    <div class="label">Score Ponderado Feegow</div>
+    <div class="delta positive">+7% vs. 2o lugar</div>
+  </div>
+  <div class="kpi">
+    <div class="value">6 sem</div>
+    <div class="label">Go-live Fase 1</div>
+    <div class="delta">Agenda + WhatsApp + Cobranca</div>
+  </div>
+  <div class="kpi">
+    <div class="value">12 sem</div>
+    <div class="label">Stack Completo</div>
+    <div class="delta">SDR IA + BI + DMED</div>
+  </div>
+  <div class="kpi">
+    <div class="value">8-12%</div>
+    <div class="label">Meta No-show</div>
+    <div class="delta positive">vs. 20-30% atual</div>
+  </div>
+  <div class="kpi">
+    <div class="value">&lt;5 min</div>
+    <div class="label">Meta Resposta Lead</div>
+    <div class="delta positive">vs. 2-6h atual</div>
+  </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="grid">
+  <div class="card">
+    <h3>Score Ponderado — 7 Sistemas</h3>
+    <canvas id="scoreChart"></canvas>
+  </div>
+  <div class="card">
+    <h3>TCO 12 Meses Comparativo (R$)</h3>
+    <canvas id="tcoChart"></canvas>
+  </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="grid">
+  <div class="card">
+    <h3>Radar — Notas por Criterio</h3>
+    <canvas id="radarChart"></canvas>
+  </div>
+  <div class="card">
+    <h3>TCO Feegow+Chatwoot — Decomposicao</h3>
+    <canvas id="donutChart"></canvas>
+  </div>
+</div>
+
+<!-- Scoring Matrix -->
+<div class="grid">
+  <div class="card card-full">
+    <h3>Matriz de Avaliacao Detalhada</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Criterio</th>
+          <th>Peso</th>
+          <th>Feegow</th>
+          <th>Ninsaude</th>
+          <th>TOTVS</th>
+          <th>HubSpot</th>
+          <th>Clin.Nuvens</th>
+          <th>Sankhya</th>
+          <th>Clint</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Cobertura funcional</td><td>25%</td><td><strong>8.5</strong></td><td>8.0</td><td>7.5</td><td>6.0</td><td>8.0</td><td>5.0</td><td>3.0</td></tr>
+        <tr><td>API + Integracoes</td><td>20%</td><td>8.0</td><td><strong>8.5</strong></td><td>6.0</td><td style="color:var(--green);font-weight:700;">9.5</td><td>5.0</td><td>5.5</td><td>6.5</td></tr>
+        <tr><td>Compliance LGPD/DMED</td><td>15%</td><td><strong>8.0</strong></td><td>7.5</td><td>8.0</td><td>5.0</td><td>6.5</td><td>6.0</td><td>3.0</td></tr>
+        <tr><td>Seguranca / auditoria</td><td>10%</td><td><strong>9.0</strong></td><td>7.5</td><td>8.5</td><td>8.0</td><td>6.0</td><td>7.0</td><td>5.0</td></tr>
+        <tr><td>Custo total</td><td>15%</td><td><strong>8.0</strong></td><td>7.0</td><td>5.0</td><td>5.5</td><td>8.0</td><td>5.5</td><td>6.0</td></tr>
+        <tr><td>Adocao / ecossistema</td><td>10%</td><td>8.0</td><td>6.5</td><td><strong>9.0</strong></td><td style="color:var(--green);font-weight:700;">9.0</td><td>5.0</td><td>7.5</td><td>4.5</td></tr>
+        <tr><td>UX / velocidade</td><td>5%</td><td><strong>8.0</strong></td><td>8.0</td><td>6.5</td><td>8.0</td><td>7.5</td><td>6.0</td><td>7.0</td></tr>
+        <tr style="background: rgba(56,189,248,0.08); font-weight: 700;"><td>SCORE FINAL</td><td>100%</td><td style="color: var(--green);">8.18</td><td>7.63</td><td>6.88</td><td>6.65</td><td>6.55</td><td>5.93</td><td>4.80</td></tr>
+      </tbody>
+    </table>
+    <div class="note-box" style="margin-top:16px;">
+      <strong>Notas sobre sistemas adicionais:</strong><br>
+      <strong style="color:#f59e0b;">HubSpot (6.65):</strong> API world-class (1.900+ apps), porem sem funcionalidades clinicas nativas (prontuario, TISS, DMED). Requer sistema clinico separado.<br>
+      <strong style="color:#8b5cf6;">Clinica nas Nuvens (6.55):</strong> Healthcare-native, preco acessivel (R$499/3 prof.), porem API contraditoria (site diz sim, reviews dizem nao). Sem SBIS.<br>
+      <strong style="color:#ec4899;">Sankhya (5.93):</strong> ERP generico com modulo saude. Forte em fiscal/BI, fraco em funcionalidades clinicas. Overengineered para clinica media.<br>
+      <strong style="color:#6b7280;">Clint (4.80):</strong> CRM de vendas para infoprodutores. NAO possui prontuario, agenda medica, convenios, DMED. Descartado para uso clinico.
+    </div>
+  </div>
+</div>
+
+<!-- Architecture -->
+<div class="grid">
+  <div class="card card-full">
+    <h3>Arquitetura-Alvo (com Chatwoot)</h3>
+    <div class="arch-grid">
+      <div class="arch-block">
+        <h4>Nucleo Clinico — Feegow Pro</h4>
+        <ul>
+          <li>Agenda + salas + profissionais</li>
+          <li>Prontuario eletronico (SBIS NGS2)</li>
+          <li>Cadastro pacientes + responsaveis</li>
+          <li>Financeiro: ctas pagar/receber, DRE, centros custo</li>
+          <li>Cobranca: PIX, link, boleto, recibos</li>
+          <li>CRM basico (funil lead→agendamento)</li>
+        </ul>
+      </div>
+      <div class="arch-block">
+        <h4>WhatsApp + SDR IA — Chatwoot</h4>
+        <ul>
+          <li>WhatsApp Business API (Meta oficial, sem BSP)</li>
+          <li>Chatbot SDR IA (ja configurado)</li>
+          <li>Captura e qualificacao de leads</li>
+          <li>Confirmacao automatica de consultas</li>
+          <li>Reativacao no-show + follow-up</li>
+          <li>Webhooks: message_created, conversation_created</li>
+        </ul>
+      </div>
+      <div class="arch-block">
+        <h4>Camada de Integracao</h4>
+        <ul>
+          <li>Chatwoot webhooks → middleware (n8n/Make/Node.js)</li>
+          <li>Middleware → Feegow API (criar agendamento, paciente)</li>
+          <li>Feegow webhooks → middleware → Chatwoot (status pagamento)</li>
+          <li>Eventos: agendamento, cancelamento, pagamento, paciente</li>
+        </ul>
+      </div>
+      <div class="arch-block">
+        <h4>BI + Contabilidade + DMED</h4>
+        <ul>
+          <li>Power BI / Metabase via API Feegow</li>
+          <li>DRE mensal, no-show rate, conversao, DSO</li>
+          <li>Exportacao financeira → Contabilidade → DMED</li>
+          <li>Governanca LGPD: DPO, ROPA, resposta titular</li>
+        </ul>
+      </div>
+    </div>
+    <div class="note-box">
+      <strong>Dados sensiveis:</strong> Prontuario e dados pessoais ficam no Feegow (AWS Brasil, SSL, SBIS NGS2). Conversas WhatsApp ficam no Chatwoot (self-hosted ou cloud — definir). Logs de auditoria imutaveis no Feegow. Permissoes granulares: recepcao ≠ medico ≠ financeiro ≠ admin.
+    </div>
+  </div>
+</div>
+
+<!-- Risk Heatmap -->
+<div class="grid">
+  <div class="card">
+    <h3>Mapa de Riscos — Classificacao</h3>
+    <div class="risk-critical risk-cell"><span>LGPD (acesso indevido / trilhas)</span><span class="badge badge-red">CRITICO</span></div>
+    <div class="risk-critical risk-cell"><span>DMED (dados financeiros incompletos)</span><span class="badge badge-red">CRITICO</span></div>
+    <div class="risk-high risk-cell"><span>Aderencia do time (adocao/treinamento)</span><span class="badge badge-yellow">ALTO</span></div>
+    <div class="risk-high risk-cell"><span>Integracao Chatwoot→Feegow (desenvolvimento)</span><span class="badge badge-yellow">ALTO</span></div>
+    <div class="risk-medium risk-cell"><span>Lock-in dados clinicos (Feegow)</span><span class="badge badge-blue">MEDIO</span></div>
+    <div class="risk-medium risk-cell"><span>Overengineering / custo oculto</span><span class="badge badge-blue">MEDIO</span></div>
+    <div class="risk-low risk-cell"><span>API rate limits / instabilidade</span><span class="badge badge-green">BAIXO</span></div>
+  </div>
+  <div class="card">
+    <h3>Risco — Probabilidade x Impacto</h3>
+    <canvas id="riskChart"></canvas>
+  </div>
+</div>
+
+<!-- Gantt -->
+<div class="grid">
+  <div class="card card-full">
+    <h3>Plano 90 Dias — Timeline</h3>
+    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">Semanas 1–12 | Marcos com responsaveis</div>
+
+    <div class="gantt-phase">
+      <div class="gantt-label">Fase 1: Setup + Agenda + Cobranca</div>
+      <div class="gantt-bar-track">
+        <div class="gantt-bar-fill" style="left: 0%; width: 33%; background: linear-gradient(90deg, #0d9488, #14b8a6);">Sem 1–4: Setup, migracao, agenda, financeiro</div>
+      </div>
+    </div>
+    <div class="gantt-phase">
+      <div class="gantt-label">Fase 2: WhatsApp Oficial + Compliance</div>
+      <div class="gantt-bar-track">
+        <div class="gantt-bar-fill" style="left: 17%; width: 33%; background: linear-gradient(90deg, #0891b2, #22d3ee);">Sem 3–6: Integracao Chatwoot↔Feegow, templates HSM, LGPD</div>
+      </div>
+    </div>
+    <div class="gantt-phase">
+      <div class="gantt-label">Fase 3: SDR IA + Automacoes</div>
+      <div class="gantt-bar-track">
+        <div class="gantt-bar-fill" style="left: 50%; width: 25%; background: linear-gradient(90deg, #7c3aed, #a78bfa);">Sem 7–9: Webhooks, lead→agendamento, no-show</div>
+      </div>
+    </div>
+    <div class="gantt-phase">
+      <div class="gantt-label">Fase 4: BI + DRE + DMED + Hardening</div>
+      <div class="gantt-bar-track">
+        <div class="gantt-bar-fill" style="left: 75%; width: 25%; background: linear-gradient(90deg, #dc2626, #f87171);">Sem 10–12: Dashboards, DMED teste, auditoria final</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <table>
+        <thead><tr><th>Semana</th><th>Marco</th><th>Responsavel</th><th>Risco</th></tr></thead>
+        <tbody>
+          <tr><td>1–2</td><td>Setup: usuarios, permissoes, migracao cadastros</td><td>TI + Admin</td><td><span class="badge badge-yellow">Dados sujos</span></td></tr>
+          <tr><td>3–4</td><td>Agenda + cobranca + conciliacao basica</td><td>Financeiro + Recepcao</td><td><span class="badge badge-yellow">Adocao</span></td></tr>
+          <tr><td>5–6</td><td>Integracao Chatwoot→Feegow + templates HSM</td><td>TI + Dev</td><td><span class="badge badge-red">Complexidade integracao</span></td></tr>
+          <tr><td>7–8</td><td>SDR IA: lead capture → agendamento automatico</td><td>Dev</td><td><span class="badge badge-yellow">Rate limits</span></td></tr>
+          <tr><td>9–10</td><td>Dashboards BI + rotina DRE/centros de custo</td><td>Financeiro + BI</td><td><span class="badge badge-blue">Dados transicao</span></td></tr>
+          <tr><td>11–12</td><td>DMED teste + hardening LGPD + auditoria</td><td>Contabilidade + Juridico</td><td><span class="badge badge-red">DMED nao testado</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- TCO Comparison Updated -->
+<div class="grid">
+  <div class="card card-full">
+    <h3>TCO 12 Meses — Atualizado (Chatwoot substitui Cloudia)</h3>
+    <table>
+      <thead><tr><th>Componente</th><th>Feegow + Chatwoot (R$)</th><th>Ninsaude + Chatwoot (R$)</th><th>TOTVS + Chatwoot (R$)</th></tr></thead>
+      <tbody>
+        <tr><td>Licencas sistema (12 meses, 4 prof.)</td><td>7.200</td><td>9.600</td><td>16.800</td></tr>
+        <tr><td>Chatwoot (self-hosted ou cloud)</td><td>0 – 1.200</td><td>0 – 1.200</td><td>0 – 1.200</td></tr>
+        <tr><td>Mensagens Meta WhatsApp (12 meses)</td><td>2.400</td><td>2.400</td><td>2.400</td></tr>
+        <tr><td>Integracao Chatwoot↔Sistema (dev)</td><td>4.000</td><td>5.500</td><td>10.000</td></tr>
+        <tr><td>Implantacao/configuracao sistema</td><td>2.500</td><td>4.000</td><td>18.000</td></tr>
+        <tr><td>Treinamento + suporte</td><td>1.500</td><td>2.000</td><td>5.000</td></tr>
+        <tr><td>BI/Relatorios</td><td>500</td><td>500</td><td>2.000</td></tr>
+        <tr style="background: rgba(56,189,248,0.08); font-weight: 700;">
+          <td>TOTAL 12 MESES</td>
+          <td style="color: var(--green);">18.100 – 19.300</td>
+          <td>24.200 – 25.400</td>
+          <td>55.400 – 56.600</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="note-box">
+      <strong>Economia vs. cenario com Cloudia:</strong> Ao usar Chatwoot (ja operacional) no lugar de Cloudia como BSP, o TCO 12 meses cai de ~R$ 24.800 para ~R$ 18.200 (cenario base Feegow). Reducao de R$ 4.200–6.600/ano em licencas BSP. Custo adicional: integracao Chatwoot↔Feegow (R$ 4.000, unica vez) via webhooks + API REST.
+    </div>
+  </div>
+</div>
+
+<!-- Go/No-Go -->
+<div class="grid">
+  <div class="card card-full">
+    <h3>Go / No-Go Criteria (8 itens — todos devem ser confirmados em demo)</h3>
+    <table>
+      <thead><tr><th>#</th><th>Criterio</th><th>Como validar</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>API REST documentada: pacientes, agendamentos, financeiro, webhooks</td><td>Acessar docs.feegow.com + testar em sandbox</td><td><span class="badge badge-yellow">DEMO</span></td></tr>
+        <tr><td>2</td><td>Webhooks funcionais: agendamento, cancelamento, pagamento, paciente</td><td>Testar webhook em sandbox com Chatwoot</td><td><span class="badge badge-yellow">DEMO</span></td></tr>
+        <tr><td>3</td><td>Chatwoot↔Feegow: viabilidade tecnica da integracao bidirecional</td><td>PoC: criar agendamento no Feegow via API a partir de evento Chatwoot</td><td><span class="badge badge-yellow">POC</span></td></tr>
+        <tr><td>4</td><td>Exportacao financeira com CPF/valor/data para DMED</td><td>Solicitar relatorio de demo com dados ficticios</td><td><span class="badge badge-yellow">DEMO</span></td></tr>
+        <tr><td>5</td><td>Perfis de acesso granulares + trilha de auditoria</td><td>Criar perfis recepcao/medico/financeiro em demo</td><td><span class="badge badge-yellow">DEMO</span></td></tr>
+        <tr><td>6</td><td>Portabilidade de dados: exportacao completa, formato aberto, 30 dias</td><td>Clausula contratual explicita</td><td><span class="badge badge-yellow">CONTRATO</span></td></tr>
+        <tr><td>7</td><td>SLA >= 99.5% com penalidade</td><td>Clausula contratual + status page</td><td><span class="badge badge-yellow">CONTRATO</span></td></tr>
+        <tr><td>8</td><td>Custo total confirmado por escrito (sem taxas ocultas)</td><td>Proposta comercial detalhada</td><td><span class="badge badge-yellow">COMERCIAL</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  Instituto Viggno — Decision Dashboard | CTO Advisory | Fevereiro 2026 | Documento confidencial
+</div>
+
+<script>
+// Score Chart — 7 sistemas
+new Chart(document.getElementById('scoreChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Feegow', 'Ninsaude', 'TOTVS', 'HubSpot', 'Clin.Nuvens', 'Sankhya', 'Clint'],
+    datasets: [{
+      label: 'Score Ponderado',
+      data: [8.18, 7.63, 6.88, 6.65, 6.55, 5.93, 4.80],
+      backgroundColor: ['#0d9488', '#0891b2', '#64748b', '#f59e0b', '#8b5cf6', '#ec4899', '#6b7280'],
+      borderRadius: 6,
+      barThickness: 36
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: { beginAtZero: true, max: 10, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+      x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (c) => `Score: ${c.raw}/10` } }
+    }
+  }
+});
+
+// TCO Chart
+new Chart(document.getElementById('tcoChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Feegow+Chatwoot', 'Ninsaude+Chatwoot', 'TOTVS+Chatwoot'],
+    datasets: [
+      { label: 'Licencas', data: [7200, 9600, 16800], backgroundColor: '#0d9488' },
+      { label: 'Chatwoot', data: [600, 600, 600], backgroundColor: '#7c3aed' },
+      { label: 'WhatsApp Meta', data: [2400, 2400, 2400], backgroundColor: '#22d3ee' },
+      { label: 'Integracao Dev', data: [4000, 5500, 10000], backgroundColor: '#fbbf24' },
+      { label: 'Implantacao', data: [2500, 4000, 18000], backgroundColor: '#f87171' },
+      { label: 'Treinamento', data: [1500, 2000, 5000], backgroundColor: '#a78bfa' },
+      { label: 'BI', data: [500, 500, 2000], backgroundColor: '#94a3b8' }
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y: { stacked: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: v => 'R$' + (v/1000) + 'k' } },
+      x: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8' } }
+    },
+    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } }
+  }
+});
+
+// Radar Chart — 7 sistemas
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Cobertura', 'API/Integ.', 'Compliance', 'Seguranca', 'Custo', 'Ecossistema', 'UX'],
+    datasets: [
+      { label: 'Feegow', data: [8.5, 8.0, 8.0, 9.0, 8.0, 8.0, 8.0], borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.12)', pointBackgroundColor: '#0d9488', borderWidth: 2.5 },
+      { label: 'Ninsaude', data: [8.0, 8.5, 7.5, 7.5, 7.0, 6.5, 8.0], borderColor: '#0891b2', backgroundColor: 'rgba(8,145,178,0.08)', pointBackgroundColor: '#0891b2', borderWidth: 2 },
+      { label: 'TOTVS', data: [7.5, 6.0, 8.0, 8.5, 5.0, 9.0, 6.5], borderColor: '#64748b', backgroundColor: 'rgba(100,116,139,0.08)', pointBackgroundColor: '#64748b', borderWidth: 2 },
+      { label: 'HubSpot', data: [6.0, 9.5, 5.0, 8.0, 5.5, 9.0, 8.0], borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.06)', pointBackgroundColor: '#f59e0b', borderWidth: 1.5, borderDash: [5,3] },
+      { label: 'Clin.Nuvens', data: [8.0, 5.0, 6.5, 6.0, 8.0, 5.0, 7.5], borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.06)', pointBackgroundColor: '#8b5cf6', borderWidth: 1.5, borderDash: [5,3] },
+      { label: 'Sankhya', data: [5.0, 5.5, 6.0, 7.0, 5.5, 7.5, 6.0], borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.06)', pointBackgroundColor: '#ec4899', borderWidth: 1.5, borderDash: [5,3] },
+      { label: 'Clint', data: [3.0, 6.5, 3.0, 5.0, 6.0, 4.5, 7.0], borderColor: '#6b7280', backgroundColor: 'rgba(107,114,128,0.06)', pointBackgroundColor: '#6b7280', borderWidth: 1.5, borderDash: [5,3] }
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: { r: { beginAtZero: true, max: 10, grid: { color: '#334155' }, pointLabels: { color: '#94a3b8', font: { size: 11 } }, ticks: { display: false } } },
+    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } }
+  }
+});
+
+// Donut - TCO Feegow decomposition
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Licencas Feegow', 'Chatwoot', 'WhatsApp Meta', 'Integracao Dev', 'Implantacao', 'Treinamento', 'BI'],
+    datasets: [{
+      data: [7200, 600, 2400, 4000, 2500, 1500, 500],
+      backgroundColor: ['#0d9488', '#7c3aed', '#22d3ee', '#fbbf24', '#f87171', '#a78bfa', '#94a3b8']
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 }, padding: 12 } },
+      tooltip: { callbacks: { label: (c) => `${c.label}: R$ ${c.raw.toLocaleString('pt-BR')} (${Math.round(c.raw/187)}%)` } }
+    }
+  }
+});
+
+// Risk Scatter
+new Chart(document.getElementById('riskChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: 'Riscos',
+      data: [
+        { x: 40, y: 85, label: 'LGPD' },
+        { x: 55, y: 70, label: 'DMED' },
+        { x: 60, y: 65, label: 'Aderencia' },
+        { x: 45, y: 72, label: 'Integ. Chatwoot↔Feegow' },
+        { x: 35, y: 80, label: 'Lock-in' },
+        { x: 30, y: 50, label: 'Overeng.' },
+        { x: 25, y: 45, label: 'API limits' }
+      ],
+      backgroundColor: (ctx) => {
+        const y = ctx.raw?.y || 0;
+        const x = ctx.raw?.x || 0;
+        if (x > 45 && y > 65) return '#f87171';
+        if (y > 70) return '#fbbf24';
+        if (x > 40) return '#fbbf24';
+        return '#4ade80';
+      },
+      pointRadius: 10,
+      pointHoverRadius: 14
+    }]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      x: { min: 0, max: 100, title: { display: true, text: 'Probabilidade (%)', color: '#94a3b8' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+      y: { min: 0, max: 100, title: { display: true, text: 'Impacto (%)', color: '#94a3b8' }, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (c) => `${c.raw.label}: Prob ${c.raw.x}%, Imp ${c.raw.y}%` } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>
